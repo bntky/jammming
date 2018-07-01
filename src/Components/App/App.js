@@ -32,12 +32,22 @@ class App extends Component {
             playlistTracks: []
         };
         this.addTrack = this.addTrack.bind(this);
+        this.removeTrack = this.removeTrack.bind(this);
     }
 
     addTrack(track) {
         const curTracks = this.state.playlistTracks;
         if( ! curTracks.find( trk => trk.id === track.id )) {
             curTracks.push(track);
+        }
+        this.setState({ playlistTracks: curTracks });
+    }
+
+    removeTrack(track) {
+        const curTracks = this.state.playlistTracks;
+        const idx = curTracks.findIndex(trk => track.id === trk.id);
+        if( idx > -1 ) {
+            curTracks.splice(idx, 1);
         }
         this.setState({ playlistTracks: curTracks });
     }
@@ -52,7 +62,8 @@ class App extends Component {
                   <SearchResults searchResults={ this.state.searchResults }
                                  onAdd={ this.addTrack } />
                   <Playlist playlistName={ this.state.playlistName }
-                            playlistTracks={ this.state.playlistTracks } />
+                            playlistTracks={ this.state.playlistTracks }
+                            onRemove={ this.removeTrack } />
                 </div>
               </div>
             </div>
