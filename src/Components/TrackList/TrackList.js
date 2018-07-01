@@ -6,9 +6,11 @@ class TrackList extends Component {
     render() {
         return (
             <div className="TrackList">
-              <Track />
-              <Track />
-              <Track />
+              {
+                  this.props.tracks.map( track => {
+                      return <Track key={ track.id } track={ track } />;
+                  })
+              }
             </div>
         );
     }
