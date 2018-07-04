@@ -3,7 +3,6 @@ import config from './config';
 const clientId = config.clientId;
 const redirectUri = config.redirectUri || 'http://localhost:3000';
 let accessToken = '';
-let expiresIn = '';
 
 const Spotify = {
     getAccessToken() {
@@ -18,7 +17,7 @@ const Spotify = {
 
             // Pull access token and expiration date from URL
             accessToken = href.match(/access_token=([^&]*)/)[1];
-            expiresIn = href.match(/expires_in=([^&]*)/)[1];
+            const expiresIn = href.match(/expires_in=([^&]*)/)[1];
 
             // Remove access token after it expires 
             window.setTimeout( () => accessToken = '', expiresIn * 1000 );
@@ -45,9 +44,41 @@ const Spotify = {
         const scope = 'playlist-modify-public';
         const url = `${baseUrl}${clientId}&redirect_uri=${redirectUri}` +
               `&response_type=${response_type}&scope=${scope}&state=${state}`;
-        window.location.replace(url);
-        return null;
+        window.location = url;
+    },
+
+    search(term) {
+        accessToken = Spotify.getAccessToken();
+        if( accessToken === '' || accessToken === null || accessToken === undefined ) {
+            return [];
+        }
+        return fetch(`https://api.spotify.com/v1/search?type=track&q=${term}`, {
+            headers: {
+                Authorization: `Bearer ${accessToken}`
+            }
+        }).then(response => {
+            if(response.ok) {
+                return response.json();
+            }
+
+            throw new Error('Request failed!');
+        }).then(responseJson => {
+            if( responseJson.tracks && responseJson.tracks.items ) {
+                return responseJson.tracks.items.map(track => {
+                    return {
+                        id: track.id,
+                        name: track.name,
+                        artist: track.artists[0].name,
+                        album: track.album.name,
+                        uri: track.uri
+                    };
+                });
+            } else {
+                return [];
+            }
+        });
     }
+
 };
 
 export default Spotify;

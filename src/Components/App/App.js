@@ -3,6 +3,7 @@ import './App.css';
 import SearchBar from '../SearchBar/SearchBar';
 import SearchResults from '../SearchResults/SearchResults';
 import Playlist from '../Playlist/Playlist';
+import Spotify from '../../utils/Spotify';
 
 class App extends Component {
     constructor(props) {
@@ -39,6 +40,7 @@ class App extends Component {
         this.updatePlaylistName = this.updatePlaylistName.bind(this);
         this.savePlaylist = this.savePlaylist.bind(this);
         this.search = this.search.bind(this);
+        Spotify.getAccessToken();
     }
 
     addTrack(track) {
@@ -67,7 +69,9 @@ class App extends Component {
     }
 
     search(term) {
-        console.log(`Searching for ${term}`);
+        Spotify.search(term).then(tracks => {
+            this.setState({ searchResults: tracks });
+        });
     }
 
     render() {
