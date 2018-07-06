@@ -77,8 +77,93 @@ const Spotify = {
                 return [];
             }
         });
-    }
+    },
 
+    savePlaylist(name, trackURIs) {
+        console.log(`Entering Spotify.savePlaylist() trying to save ${name} named playlist`);
+        if( ! name || trackURIs.length === 0 ) {
+            return null;
+        }
+
+        accessToken = Spotify.getAccessToken();
+        const headers = {
+            Authorization: `Bearer ${accessToken}`
+        };
+        let userId = '';
+        const baseUrl = 'https://api.spotify.com/v1/';
+        let playlistID = '';
+
+        // Get the User ID
+        console.log(`Attempting to get user ID`);
+        return fetch(`${baseUrl}me`, {headers})
+            .then(response => {
+                console.log(`Received a response for userId: ${accessToken}`);
+                console.log(`Calling URL: ${baseUrl}me`);
+                if( response.ok ) {
+                    console.log(response);
+                    return response.json();
+                }
+
+                console.log('Failed to get user ID');
+                throw new Error('Request failed!: No user ID');
+            })
+            .then(responseJson => {
+                // Create a play list with the user ID
+                if( responseJson.id ) {
+                    userId = responseJson.id;
+                    console.log(`Got user ID: ${userId}`);
+                    return fetch(`${baseUrl}users/${userId}/playlists`, {
+                        method: 'POST',
+                        headers,
+                        body: JSON.stringify({name})
+                    }).then(response => {
+                        if( response.ok ) {
+                            return response.json();
+                        }
+
+                        console.log(`Failed to get new playlist for ${userId}`);
+                        throw new Error(
+                            'Request failed!: Play list NOT created');
+                    }).then(responseJson => {
+                        // Add tracks to the created play list
+                        if( responseJson.id ) {
+                            playlistID = responseJson.id;
+                            console.log(`Got new playlist with ID: ${playlistID}`);
+                            return fetch(
+                                `${baseUrl}users/${userId}/playlists/` +
+                                    `${playlistID}/tracks`, {
+                                        method: 'POST',
+                                        headers,
+                                        body: JSON.stringify({uris: trackURIs})
+                                    }).then(response => {
+                                        if( response.ok ) {
+                                            return response.json();
+                                        }
+
+                                        console.log(`Failed to add tracks for ${userId} in playlist, ${playlistID}`);
+                                        throw new Error(
+                                            'Request failed!: Unable to add tracks');
+                                    }).then(responseJson => {
+                                        if( responseJson.snapshot_id ) {
+                                            console.log(`Added songs to playlist`);
+                                            return responseJson.snapshot_id;
+                                        }
+
+                                        console.log(`Failed to parse add tracks results for ${userId} in laylist, ${playlistID}`);
+                                        throw new Error(
+                                            'Request failed!: Unable to add tracks');
+                                    });
+                        }
+
+                        console.log(`Failed to parse new playlist results for ${userId}`);
+                        throw new Error('Request failed!: Playlist NOT created');
+                    });
+                }
+
+                console.log('Failed to parse user ID from JSON results');
+                throw new Error('Request failed!: No user ID');
+            });
+    }
 };
 
 export default Spotify;

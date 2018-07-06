@@ -9,30 +9,8 @@ class App extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            searchResults: [
-                {
-                    id: 1,
-                    name: 'Mr. Klaw',
-                    album: 'Miscellaneous T The B Side Remix Compilation',
-                    artist: 'They Might Be Giants',
-                    uri: 'https://open.spotify.com/track/46Jgumlov6yuVz35ROk1XY'
-                },
-                {
-                    id: 2,
-                    name: 'Birds Fly',
-                    album: 'Miscellaneous T The B Side Remix Compilation',
-                    artist: 'They Might Be Giants',
-                    uri: 'https://open.spotify.com/track/4QGXc9Hslo0IKISTY1JrIS'
-                },
-                {
-                    id: 3,
-                    name: 'Nightgown of the Sullen Moon',
-                    album: 'Miscellaneous T The B Side Remix Compilation',
-                    artist: 'They Might Be Giants',
-                    uri: 'https://open.spotify.com/track/5bmoxC4K2qxvdsi9Td8yQU'
-                }
-            ],
-            playlistName: '',
+            searchResults: [],
+            playlistName: 'New Playlist',
             playlistTracks: []
         };
         this.addTrack = this.addTrack.bind(this);
@@ -65,7 +43,13 @@ class App extends Component {
     }
 
     savePlaylist() {
-        const trackURIs = this.state.searchResults.map( track => track.uri );
+        console.log(`Entering App.savePlaylist() with ${this.state.playlistTracks.length}`);
+        const trackURIs = this.state.playlistTracks.map( track => track.uri );
+        Spotify.savePlaylist(this.state.playlistName, trackURIs);
+        this.setState({
+            playlistName: 'New Playlist',
+            playlistTracks: []
+        });
     }
 
     search(term) {
