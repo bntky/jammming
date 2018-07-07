@@ -42,20 +42,19 @@ class App extends Component {
         this.setState({ playlistName: name });
     }
 
-    savePlaylist() {
-        console.log(`Entering App.savePlaylist() with ${this.state.playlistTracks.length}`);
+    async savePlaylist() {
         const trackURIs = this.state.playlistTracks.map( track => track.uri );
-        Spotify.savePlaylist(this.state.playlistName, trackURIs);
-        this.setState({
-            playlistName: 'New Playlist',
-            playlistTracks: []
-        });
+        if( await Spotify.savePlaylist(this.state.playlistName, trackURIs) ) {
+            this.setState({
+                playlistName: 'New Playlist',
+                playlistTracks: []
+            });
+        }
     }
 
-    search(term) {
-        Spotify.search(term).then(tracks => {
-            this.setState({ searchResults: tracks });
-        });
+    async search(term) {
+        const tracks = await Spotify.search(term);
+        this.setState({ searchResults: tracks });
     }
 
     render() {

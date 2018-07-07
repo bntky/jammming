@@ -47,40 +47,39 @@ const Spotify = {
         window.location = url;
     },
 
-    search(term) {
+    async search(term) {
         accessToken = Spotify.getAccessToken();
-        if( accessToken === '' || accessToken === null || accessToken === undefined ) {
+        if( accessToken === '' || accessToken === null ||
+            accessToken === undefined ) {
             return [];
         }
-        return fetch(`https://api.spotify.com/v1/search?type=track&q=${term}`, {
+
+        const url = `https://api.spotify.com/v1/search?type=track&q=${term}`;
+        const response = await fetch(url, {
             headers: {
                 Authorization: `Bearer ${accessToken}`
             }
-        }).then(response => {
-            if(response.ok) {
-                return response.json();
-            }
-
-            throw new Error('Request failed!');
-        }).then(responseJson => {
-            if( responseJson.tracks && responseJson.tracks.items ) {
-                return responseJson.tracks.items.map(track => {
-                    return {
-                        id: track.id,
-                        name: track.name,
-                        artist: track.artists[0].name,
-                        album: track.album.name,
-                        uri: track.uri
-                    };
-                });
-            } else {
-                return [];
-            }
         });
+
+        if( ! response.ok) {
+            return [];
+        }
+
+        const responseJson = await response.json();
+        if( ! responseJson.tracks || ! responseJson.tracks.items ) {
+            return [];
+        }
+
+        return responseJson.tracks.items.map(track => Object({
+            id: track.id,
+            name: track.name,
+            artist: track.artists[0].name,
+            album: track.album.name,
+            uri: track.uri
+        }));
     },
 
-    savePlaylist(name, trackURIs) {
-        console.log(`Entering Spotify.savePlaylist() trying to save ${name} named playlist`);
+    async savePlaylist(name, trackURIs) {
         if( ! name || trackURIs.length === 0 ) {
             return null;
         }
@@ -89,80 +88,57 @@ const Spotify = {
         const headers = {
             Authorization: `Bearer ${accessToken}`
         };
-        let userId = '';
         const baseUrl = 'https://api.spotify.com/v1/';
-        let playlistID = '';
 
         // Get the User ID
-        console.log(`Attempting to get user ID`);
-        return fetch(`${baseUrl}me`, {headers})
-            .then(response => {
-                console.log(`Received a response for userId: ${accessToken}`);
-                console.log(`Calling URL: ${baseUrl}me`);
-                if( response.ok ) {
-                    console.log(response);
-                    return response.json();
-                }
+        const responseUid = await fetch(`${baseUrl}me`, {headers});
+        if( ! responseUid.ok ) {
+            return null;
+        }
 
-                console.log('Failed to get user ID');
-                throw new Error('Request failed!: No user ID');
-            })
-            .then(responseJson => {
-                // Create a play list with the user ID
-                if( responseJson.id ) {
-                    userId = responseJson.id;
-                    console.log(`Got user ID: ${userId}`);
-                    return fetch(`${baseUrl}users/${userId}/playlists`, {
-                        method: 'POST',
-                        headers,
-                        body: JSON.stringify({name})
-                    }).then(response => {
-                        if( response.ok ) {
-                            return response.json();
-                        }
+        const responseJsonUid = await responseUid.json();
+        if( ! responseJsonUid.id ) {
+            return null;
+        }
 
-                        console.log(`Failed to get new playlist for ${userId}`);
-                        throw new Error(
-                            'Request failed!: Play list NOT created');
-                    }).then(responseJson => {
-                        // Add tracks to the created play list
-                        if( responseJson.id ) {
-                            playlistID = responseJson.id;
-                            console.log(`Got new playlist with ID: ${playlistID}`);
-                            return fetch(
-                                `${baseUrl}users/${userId}/playlists/` +
-                                    `${playlistID}/tracks`, {
-                                        method: 'POST',
-                                        headers,
-                                        body: JSON.stringify({uris: trackURIs})
-                                    }).then(response => {
-                                        if( response.ok ) {
-                                            return response.json();
-                                        }
+        const userId = responseJsonUid.id;
 
-                                        console.log(`Failed to add tracks for ${userId} in playlist, ${playlistID}`);
-                                        throw new Error(
-                                            'Request failed!: Unable to add tracks');
-                                    }).then(responseJson => {
-                                        if( responseJson.snapshot_id ) {
-                                            console.log(`Added songs to playlist`);
-                                            return responseJson.snapshot_id;
-                                        }
+        // Create a play list with the user ID
+        const playlistUrl = `${baseUrl}users/${userId}/playlists`;
+        const resPlaylistID = await fetch(playlistUrl, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({name})
+        });
+        if( ! resPlaylistID.ok ) {
+            return null;
+        }
 
-                                        console.log(`Failed to parse add tracks results for ${userId} in laylist, ${playlistID}`);
-                                        throw new Error(
-                                            'Request failed!: Unable to add tracks');
-                                    });
-                        }
+        const resPlaylistJsonID = await resPlaylistID.json();
+        if( ! resPlaylistJsonID.id ) {
+            return null;
+        }
 
-                        console.log(`Failed to parse new playlist results for ${userId}`);
-                        throw new Error('Request failed!: Playlist NOT created');
-                    });
-                }
+        const playlistID = resPlaylistJsonID.id;
 
-                console.log('Failed to parse user ID from JSON results');
-                throw new Error('Request failed!: No user ID');
-            });
+        // Add tracks to the created play list
+        const tracksUrl =
+              `${baseUrl}users/${userId}/playlists/${playlistID}/tracks`;
+        const resSetPLTracks = await fetch(tracksUrl, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({uris: trackURIs})
+        });
+        if( ! resSetPLTracks.ok ) {
+            return null;
+        }
+
+        const resSetPLTracksJson = await resSetPLTracks.json();
+        if( ! resSetPLTracksJson.snapshot_id ) {
+            return null;
+        }
+
+        return resSetPLTracksJson.snapshot_id;
     }
 };
 
